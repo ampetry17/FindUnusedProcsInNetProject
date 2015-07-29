@@ -83,6 +83,13 @@
       <Name>FindUnusedProcsInProject</Name>
     </ProjectReference>
   </ItemGroup>
+  <ItemGroup>
+    <Content Include="TestFiles\TestFileSubFolder\UnitTestContentSubFileMiss.sql" />
+    <Content Include="TestFiles\UnitTestContentFileHit.sql" />
+    <Content Include="TestFiles\UnitTestContentFileMiss.sql" />
+    <Content Include="TestFiles\UnitTestContentFileNotInList.txt" />
+  </ItemGroup>
+  <ItemGroup />
   <Choose>
     <When Condition="'$(VisualStudioVersion)' == '10.0' And '$(IsCodedUITest)' == 'True'">
       <ItemGroup>

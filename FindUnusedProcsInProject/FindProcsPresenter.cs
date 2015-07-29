@@ -156,6 +156,8 @@ namespace FindUnusedProcsInProject
 
         public static void FindProcsInLine(IEnumerable<UnusedProcItem> needleList, string file, string line, int lineCount)
         {
+            //Future versions will use a regex here to m/([/w|\'|\"|\.]{ProcName}[/w|\'|\"|\.])/ to find cases where we match 
+            //whitespace, a dot, or single or double quotes around our needle. That should cut back on false positives.
             string lineText = line;
             foreach (UnusedProcItem needle in needleList.Where(x => lineText.Contains(x.ProcName) && !file.EndsWith(string.Format("{0}.sql", x.ProcName))))
             {
