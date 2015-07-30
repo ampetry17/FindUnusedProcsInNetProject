@@ -130,11 +130,11 @@ namespace FindUnusedProcsInProject
             int i = 0;
             foreach (string file in fileList)
             {
-                _bw.ReportProgress((i * 100) / fileList.Count, string.Format("{0} of {1} files: {2}", i, fileList.Count, file.Replace(_view.SolutionPath(), "")));
+                if(_bw != null) _bw.ReportProgress((i * 100) / fileList.Count, string.Format("{0} of {1} files: {2}", i, fileList.Count, file.Replace(_view.SolutionPath(), "")));
                 FindProcsInFile(itemsToSearchFor, file);
                 i += 1;
             }
-            _bw.ReportProgress(100, "Finished");
+            if (_bw != null) _bw.ReportProgress(100, "Finished");
         }
 
         public static void FindProcsInFile(List<UnusedProcItem> needleList, string file)

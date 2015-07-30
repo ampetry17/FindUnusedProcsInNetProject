@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
-using System.Reflection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using FindUnusedProcsInProject;
@@ -19,6 +17,7 @@ namespace UnitTests
         private const string userName = "User";
         private const string password = "Password";
         private string root = "";
+        private List<UnusedProcItem> _unusedProcItems;
 
         private void SetupView()
         {
@@ -37,6 +36,13 @@ namespace UnitTests
         {
             SetupView();
             _presenter = new FindProcsPresenter(_view.Object);
+            _unusedProcItems = new List<UnusedProcItem>
+            {
+                new UnusedProcItem
+                {
+                    ProcName = "ExpectedStoreProc"
+                }
+            };
         }
 
         [TestMethod]
@@ -87,8 +93,8 @@ namespace UnitTests
         [TestMethod]
         public void GetSubDirectories_Finds_Sub_Directories()
         {
-            string[] expected = new string[] { string.Format(@"{0}\TestFileSubFolder", root) };
-            string[] actual = null;
+            string[] expected = { string.Format(@"{0}\TestFileSubFolder", root) };
+            string[] actual;
             bool resultBool = _presenter.GetSubDirectories(root, out actual);
 
             Assert.IsTrue(resultBool, "GetSubDirectories returned false, and should not.");
@@ -118,6 +124,60 @@ namespace UnitTests
                 Assert.IsTrue(expected.Contains(s), string.Format("Actual contains {0} which is not in expected results.", s));
             }
         }
-        
+
+        [TestMethod]
+        public void FindProcsInFileList_Finds_Proc_When_In_File()
+        {
+            List<string> fileList = new List<string>
+            {
+                string.Format(@"{0}\UnitTestContentFileHit.sql", root),
+                string.Format(@"{0}\UnitTestContentFileMiss.sql", root),
+                string.Format(@"{0}\UnitTestContentFileNotInList.txt", root)
+            };
+            _presenter.FindProcsInFileList(_unusedProcItems, fileList);
+            foreach (UnusedProcItem procItem in _unusedProcItems)
+            {
+                Assert.IsTrue(procItem.CountOfHits == 1, "FindProcsInFileList found the proc too many times. It found it {0}", procItem.CountOfHits);
+                Assert.IsTrue(procItem.CountOfHits == procItem.ContextList.Count, "FindProcsInFileList has a different number of counts ({0}) from items in the context list ({1})", procItem.CountOfHits, procItem.ContextList.Count );
+                Assert.IsTrue(procItem.ContextList[0].Item1 == string.Format(@"{0}\UnitTestContentFileHit.sql", root), string.Format("Expected to find hit in: \n {0}\n. Found it in:\n{1}", string.Format(@"{0}\UnitTestContentFileHit.sql", root), procItem.ContextList[0].Item1));
+                Assert.AreEqual(procItem.ContextList[0].Item2, 5, string.Format("FindProcsInFileList expected to match on line 7, but matched on {0}", procItem.ContextList[0].Item2));
+                Assert.AreEqual(procItem.ContextList[0].Item3, "We will be looking for ExpectedStoreProc as the name of the proc that we're searching for.", string.Format("FindProcsInFileList should have matched this line:\nWe should not find this line which has expectednotproc.\n Instead, it matched {0}", procItem.ContextList[0].Item3));
+            }            
+        }
+
+        [TestMethod]
+        public void FindProcsInLine_Matches_Only_Lines_With_Proc()
+        {
+            List<UnusedProcItem> needles = GenerateProcListForLineTests();
+            FindProcsPresenter.FindProcsInLine(needles, "programFile.cs", "This line contains a call to spMatch but not to that other proc.", 1);
+            Assert.AreEqual(needles.Count(x => x.CountOfHits > 0), 1, string.Format("Meant to find one match in FindProcsInLine. Found {0}", needles.Count(x => x.CountOfHits > 0)));
+            UnusedProcItem matchingItem = needles.FirstOrDefault(x => x.CountOfHits == 1);
+            Assert.IsNotNull(matchingItem, "FindProcsInLine did not find a match. Should have found one on spMatch.");
+            Assert.AreEqual(matchingItem.ProcName, "spMatch", "FindProcsInLine was meant to find a match on spMatch, but found it on {0}", matchingItem.ProcName);
+        }
+
+        [TestMethod]
+        public void FindProcsInLine_Ignores_Files_That_Generate_Proc_In_Question()
+        {
+            List<UnusedProcItem> needles = GenerateProcListForLineTests();
+            FindProcsPresenter.FindProcsInLine(needles, "spMatch.sql", "CREATE PROC spMatch", 1);
+            Assert.AreEqual(needles.Count(x => x.CountOfHits > 0), 0, string.Format("Meant to find no matches in FindProcsInLine. Found {0}", needles.Count(x => x.CountOfHits > 0)));           
+        }
+
+        private List<UnusedProcItem> GenerateProcListForLineTests()
+        {
+            List<UnusedProcItem> ProcList = new List<UnusedProcItem>();
+            UnusedProcItem match = new UnusedProcItem()
+            {
+                ProcName = "spMatch"
+            };
+            ProcList.Add(match);
+            UnusedProcItem misMatch = new UnusedProcItem()
+            {
+                ProcName = "NotMatching"
+            };
+            ProcList.Add(misMatch);
+            return ProcList;
+        }
     }
 }
